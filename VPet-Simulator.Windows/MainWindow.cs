@@ -2,6 +2,7 @@
 using CSCore.CoreAudioAPI;
 using LinePutScript;
 using LinePutScript.Localization.WPF;
+using Panuon.WPF.UI;
 using Steamworks;
 using System;
 using System.Collections.Generic;
@@ -14,8 +15,11 @@ using System.Threading.Tasks;
 using System.Timers;
 using System.Web;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media.Imaging;
 using VPet_Simulator.Core;
 using VPet_Simulator.Windows.Interface;
+using static VPet_Simulator.Core.GraphHelper;
 using static VPet_Simulator.Core.GraphInfo;
 using Timer = System.Timers.Timer;
 using ToolBar = VPet_Simulator.Core.ToolBar;
@@ -44,7 +48,7 @@ namespace VPet_Simulator.Windows
         /// <summary>
         /// 版本号
         /// </summary>
-        public int version { get; } = 101;
+        public int version { get; } = 102;
         /// <summary>
         /// 版本号
         /// </summary>
@@ -53,6 +57,8 @@ namespace VPet_Simulator.Windows
         public List<LowText> LowFoodText { get; set; } = new List<LowText>();
 
         public List<LowText> LowDrinkText { get; set; } = new List<LowText>();
+
+        public List<SelectText> SelectTexts { get; set; } = new List<SelectText>();
 
         public List<ClickText> ClickTexts { get; set; } = new List<ClickText>();
         /// <summary>
@@ -94,10 +100,47 @@ namespace VPet_Simulator.Windows
                 return null;
             return list[Function.Rnd.Next(list.Count)];
         }
+        private Image hashcheckimg;
+        public void HashCheckOff()
+        {
+            HashCheck = false;
+        }
         /// <summary>
         /// 存档 Hash检查 是否通过
         /// </summary>
-        public bool HashCheck { get; set; } = true;
+        public bool HashCheck
+        {
+            get => hashCheck;
+            set
+            {
+                hashCheck = value;
+                Main?.Dispatcher.Invoke(() =>
+                {
+                    if (hashCheck)
+                    {
+                        if (hashcheckimg == null)
+                        {
+                            hashcheckimg = new Image();
+                            hashcheckimg.Source = new BitmapImage(new Uri("pack://application:,,,/Res/hash.png"));
+                            hashcheckimg.HorizontalAlignment = HorizontalAlignment.Right;
+                            hashcheckimg.ToolTip = "是没有修改过存档/使用超模MOD的玩家专属标志".Translate();
+                            Grid.SetColumn(hashcheckimg, 4);
+                            Grid.SetRowSpan(hashcheckimg, 2);
+                            Main.ToolBar.gdPanel.Children.Add(hashcheckimg);
+                        }
+                    }
+                    else
+                    {
+                        if (hashcheckimg != null)
+                        {
+                            Main.ToolBar.gdPanel.Children.Remove(hashcheckimg);
+                            hashcheckimg = null;
+                        }
+                    }
+                });
+
+            }
+        }
         public void SetZoomLevel(double zl)
         {
             Set.ZoomLevel = zl;
@@ -234,7 +277,42 @@ namespace VPet_Simulator.Windows
         int lowstrengthAskCountDrink = 20;
         private void lowStrength()
         {
-            if (Core.Save.Mode == GameSave.ModeType.Happy || Core.Save.Mode == GameSave.ModeType.Nomal)
+            if (Set.AutoBuy && Core.Save.Money >= 100)
+            {
+                var havemoney = Core.Save.Money * 1.2;
+                List<Food> food = Foods.FindAll(x => x.Price >= 2 && x.Health >= 0 && x.Exp >= 0 && x.Likability >= 0 && x.Price < havemoney //桌宠不吃负面的食物
+                 && !x.IsOverLoad() // 不吃超模食物
+                );
+
+                if (Core.Save.StrengthFood < 75)
+                {
+                    if (Core.Save.StrengthFood < 50)
+                    {//太饿了,找正餐
+                        food = food.FindAll(x => x.Type == Food.FoodType.Meal && x.StrengthFood > 20);
+                    }
+                    else
+                    {//找零食
+                        food = food.FindAll(x => x.Type == Food.FoodType.Snack && x.StrengthFood > 10);
+                    }
+                    if (food.Count == 0)
+                        return;
+                    var item = food[Function.Rnd.Next(food.Count)];
+                    Core.Save.Money -= item.Price * 0.2;
+                    TakeItem(item);
+                    Main.Display(GraphType.Eat, item.ImageSource, Main.DisplayToNomal);
+                }
+                else if (Core.Save.StrengthDrink < 75)
+                {
+                    food = food.FindAll(x => x.Type == Food.FoodType.Drink && x.StrengthDrink > 10);
+                    if (food.Count == 0)
+                        return;
+                    var item = food[Function.Rnd.Next(food.Count)];
+                    Core.Save.Money -= item.Price * 0.2;
+                    TakeItem(item);
+                    Main.Display(GraphType.Drink, item.ImageSource, Main.DisplayToNomal);
+                }
+            }
+            else if (Core.Save.Mode == GameSave.ModeType.Happy || Core.Save.Mode == GameSave.ModeType.Nomal)
             {
                 if (Core.Save.StrengthFood < 75 && Function.Rnd.Next(lowstrengthAskCountFood--) == 0)
                 {
@@ -337,6 +415,59 @@ namespace VPet_Simulator.Windows
 
 
         }
+        /// <summary>
+        /// 使用/食用物品 (不包括显示动画)
+        /// </summary>
+        /// <param name="item">物品</param>
+        public void TakeItem(Food item)
+        {
+            //获取吃腻时间
+            DateTime now = DateTime.Now;
+            DateTime eattime = Set.PetData.GetDateTime("buytime_" + item.Name, now);
+            double eattimes = 0;
+            if (eattime > now)
+            {
+                eattimes = (eattime - now).TotalHours;
+            }
+            //开始加点
+            Core.Save.EatFood(item, Math.Max(0.5, 1 - Math.Pow(eattimes, 2) * 0.01));
+            //吃腻了
+            eattimes += 2;
+            Set.PetData.SetDateTime("buytime_" + item.Name, now.AddHours(eattimes));
+            //通知
+            item.LoadEatTimeSource(this);
+            item.NotifyOfPropertyChange("Eattime");
+
+            Core.Save.Money -= item.Price;
+            //统计
+            Set.Statistics[(gint)("buy_" + item.Name)]++;
+            Set.Statistics[(gdbe)"stat_betterbuy"] += item.Price;
+            switch (item.Type)
+            {
+                case Food.FoodType.Food:
+                    Set.Statistics[(gdbe)"stat_bb_food"] += item.Price;
+                    break;
+                case Food.FoodType.Drink:
+                    Set.Statistics[(gdbe)"stat_bb_drink"] += item.Price;
+                    break;
+                case Food.FoodType.Drug:
+                    Set.Statistics[(gdbe)"stat_bb_drug"] += item.Price;
+                    break;
+                case Food.FoodType.Snack:
+                    Set.Statistics[(gdbe)"stat_bb_snack"] += item.Price;
+                    break;
+                case Food.FoodType.Functional:
+                    Set.Statistics[(gdbe)"stat_bb_functional"] += item.Price;
+                    break;
+                case Food.FoodType.Meal:
+                    Set.Statistics[(gdbe)"stat_bb_meal"] += item.Price;
+                    break;
+                case Food.FoodType.Gift:
+                    Set.Statistics[(gdbe)"stat_bb_gift"] += item.Price;
+                    break;
+            }
+        }
+
 
         public void RunAction(string action)
         {
@@ -445,6 +576,9 @@ namespace VPet_Simulator.Windows
             if (string.IsNullOrWhiteSpace(line.ToString()))
                 return false;
             Core.Save = GameSave.Load(line);
+            if (Core.Save.Money == 0 && Core.Save.Likability == 0 && Core.Save.Exp == 0 
+                && Core.Save.StrengthDrink == 0 && Core.Save.StrengthFood == 0)//数据全是0,可能是bug
+                return false;
             long hash = line.GetInt64("hash");
             if (line.Remove("hash"))
             {
@@ -611,6 +745,8 @@ namespace VPet_Simulator.Windows
         public bool? CurrMusicType { get; private set; }
 
         int LastDiagnosisTime = 0;
+        private bool hashCheck = true;
+
         /// <summary>
         /// 上传遥测文件
         /// </summary>
@@ -627,7 +763,7 @@ namespace VPet_Simulator.Windows
             if (LastDiagnosisTime++ < Set.DiagnosisInterval)
                 return;//等待间隔
             LastDiagnosisTime = 0;
-            string _url = "http://cn.exlb.org:5810/Report";
+            string _url = "http://cn.exlb.org:5810/VPET/Report";
             //参数
             StringBuilder sb = new StringBuilder();
             sb.Append("action=data");
@@ -670,5 +806,30 @@ namespace VPet_Simulator.Windows
         /// 关闭指示器,默认为true
         /// </summary>
         public bool CloseConfirm { get; private set; } = true;
+        /// <summary>
+        /// 超模工作检查
+        /// </summary>
+        public bool WorkCheck(Work work)
+        {
+            //看看是否超模
+            if (HashCheck && work.IsOverLoad())
+            {
+                var spend = (Math.Pow(work.StrengthFood * 2 + 1, 2) / 6 + Math.Pow(work.StrengthDrink * 2 + 1, 2) / 9 +
+               Math.Pow(work.Feeling * 2 + 1, 2) / 12) * (Math.Pow(work.LevelLimit / 2 + 1, 0.5) / 4 + 1) - 0.5;
+                var get = (work.MoneyBase + work.MoneyLevel * 10) * (work.MoneyLevel + 1) * (1 + work.FinishBonus / 2);
+                if (work.Type != Work.WorkType.Work)
+                {
+                    get /= 12;//经验值换算
+                }
+                var rel = get / spend;
+                if (MessageBoxX.Show("当前工作数据属性超模,是否继续工作?\n超模工作可能会导致游戏发生不可预料的错误\n超模工作不影响大部分成就解锁\n当前数据比率 {0:f2}\n推荐比率<1.5"
+                    .Translate(rel), "超模工作提醒".Translate(), MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                {
+                    return false;
+                }
+                HashCheck = false;
+            }
+            return true;
+        }
     }
 }

@@ -325,9 +325,9 @@
                                         Style="{DynamicResource StandardRadioButtonStyle}"
                                         ToolTip="{ll:Str 需要去OpenAI官网申请}" />
                                 <RadioButton x:Name="RBCGPTUseLB" Checked="CGPType_Checked"
-                                        Content="{ll:Str '使用桌宠开发者\&#13;提供的免费API'}" GroupName="cgpttype" IsChecked="True"
+                                        Content="{ll:Str '使用桌宠选项式\&#13;聊天功能'}" GroupName="cgpttype" IsChecked="True"
                                         Style="{DynamicResource StandardRadioButtonStyle}"
-                                        ToolTip="{ll:Str 需遵循相关协议法律法规并有聊天字数限制}" />
+                                        ToolTip="{ll:Str 支持MOD与创意工坊添加聊天内容}" />
                                 <RadioButton x:Name="RBCGPTClose" Grid.Row="1" Checked="CGPType_Checked"
                                         Content="{ll:Str '关闭聊天框'}" GroupName="cgpttype"
                                         Style="{DynamicResource StandardRadioButtonStyle}" />
@@ -346,6 +346,9 @@
                         <Button Grid.Row="1" Grid.Column="2" Margin="4" Padding="1" pu:ButtonHelper.CornerRadius="4"
                                 Background="{DynamicResource SecondaryLight}" Click="save_click" Content="{ll:Str 保存游戏}"
                                 ToolTip="{ll:Str '手动保存桌宠存档,就算不手动保存,桌宠也会在退出的时候自动保存'}" />
+                        <Button Grid.Row="1" Grid.Column="2" Margin="4" Padding="1" pu:ButtonHelper.CornerRadius="4"
+                                Background="{DynamicResource SecondaryLight}" 
+                                Content="{ll:Str 重新开始}" ToolTip="{ll:Str '重新开始新游戏,重置统计等信息\&#13;对于想要获得脱离超模从而获得成就非常有帮助'}" Click="restart_click" />
                         <Button Grid.Row="1" Grid.Column="2" Margin="4" Padding="1" pu:ButtonHelper.CornerRadius="4"
                                 Background="{DynamicResource SecondaryLight}" Click="cleancache_click"
                                 Content="{ll:Str 清理缓存}" ToolTip="{ll:Str '清理缓存的动画,声音文件'}" />
@@ -647,43 +650,58 @@
 
             </TabItem>
             <TabItem BorderBrush="{DynamicResource PrimaryDarker}" Header="{ll:Str 诊断}">
-                <StackPanel>
-                    <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Background="{x:Null}" FontSize="13"
-                            TextWrapping="Wrap">
-                        <Run FontSize="18" FontWeight="Bold" Text="{ll:Str 诊断与反馈}" /> <LineBreak />
-                        <Run Text="{ll:Str '选择要发送给 LBGame 的诊断数据,诊断数据用于保护和及时更新 虚拟桌宠模拟器, 解决问题并改进产品.'}" /><LineBreak />
-                        <Run Text="{ll:Str '无论选择哪个选项,游戏都可以安全正常地运行.'}" /> <Hyperlink Click="hyper_moreInfo">
-                            <Run Text="{ll:Str 获取有关这些设置的更多信息}" />
-                        </Hyperlink>
-                        <LineBreak />   <Run FontWeight="Bold" Text="{ll:Str '当前存档Hash验证信息'}" />
-                        :<Run x:Name="RHashCheck" FontWeight="Bold" Text="通过" />
-                    </TextBlock>
-                    <RadioButton x:Name="RBDiagnosisYES" Margin="10,10,10,0" HorizontalAlignment="Left"
-                            VerticalAlignment="Top" Checked="RBDiagnosisYES_Checked"
-                            Content="{ll:Str '发送诊断数据: 发送游戏存档, 包括饱腹,状态等各种游戏内\&#13;数据. 可能会包括该游戏内存和CPU使用情况'}"
-                            GroupName="diagnosis" Style="{DynamicResource StandardRadioButtonStyle}" />
-                    <RadioButton x:Name="RBDiagnosisNO" Margin="10,10,10,0" HorizontalAlignment="Left"
-                            VerticalAlignment="Top" Checked="RBDiagnosisNO_Checked"
-                            Content="{ll:Str '不发送诊断数据: 适用于启用修改器,修改过游戏数据等不\&#13;符合分析数据条件. 或不希望提供游戏数据的玩家'}"
-                            GroupName="diagnosis" IsChecked="True" Style="{DynamicResource StandardRadioButtonStyle}" />
-                    <TextBlock Margin="0,15,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
-                            Background="{x:Null}" TextWrapping="Wrap">
-                        <Run FontWeight="Bold" Text="{ll:Str 反馈频率}" /><LineBreak />
-                        <Run Text="{ll:Str 'VOS 应寻求我反馈按以下频率'}" />
-                    </TextBlock>
-                    <ComboBox x:Name="CBDiagnosis" Width="200" Margin="10,5,0,0" HorizontalAlignment="Left"
-                            VerticalAlignment="Top" IsEnabled="False" SelectedIndex="1"
-                            SelectionChanged="CBDiagnosis_SelectionChanged"
-                            Style="{DynamicResource StandardComboBoxStyle}">
-                        <ComboBoxItem Content="{ll:Str '每 两百 周期一次'}" />
-                        <ComboBoxItem Content="{ll:Str '每 五百 周期一次'}" />
-                        <ComboBoxItem Content="{ll:Str '每 一千 周期一次'}" />
-                        <ComboBoxItem Content="{ll:Str '每 两千 周期一次'}" />
-                        <ComboBoxItem Content="{ll:Str '每 五千 周期一次'}" />
-                        <ComboBoxItem Content="{ll:Str '每 一万 周期一次'}" />
-                        <ComboBoxItem Content="{ll:Str '每 两万 周期一次'}" />
-                    </ComboBox>
-                </StackPanel>
+                <ScrollViewer>
+                    <StackPanel>
+                        <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Background="{x:Null}"
+                                TextWrapping="Wrap">
+                                <Run FontSize="18" FontWeight="Bold" Text="{ll:Str 自动超模MOD优化}" /><LineBreak />
+                                <Run Text="{ll:Str '对于超模内容,游戏会自动计算合理价格\&#13;如果未使用任何超模数据,数据菜单栏将会显示图标方便您进行炫耀数据'}" />
+                        </TextBlock>
+                        <pu:Switch x:Name="swAutoCal" Grid.Column="2" Background="Transparent" BorderBrush="{DynamicResource PrimaryDark}"
+                                BoxHeight="18" BoxWidth="35"
+                                CheckedBackground="{DynamicResource Primary}" CheckedBorderBrush="{DynamicResource Primary}"
+                                CheckedToggleBrush="{DynamicResource DARKPrimaryText}" Content="{ll:Str '自动计算合理价格'}"
+                                ToggleBrush="{DynamicResource PrimaryDark}" ToggleShadowColor="{x:Null}" ToggleSize="14"
+                                ToolTip="{ll:Str '该选项重启后生效'}" HorizontalAlignment="Left"
+                                Margin="20,0,0,0"
+                                Checked="swAutoCal_Checked" Unchecked="swAutoCal_Checked" />
+                        <TextBlock HorizontalAlignment="Left" VerticalAlignment="Top" Background="{x:Null}" FontSize="13"
+                                TextWrapping="Wrap" Margin="0,20,0,0">
+                            <Run FontSize="18" FontWeight="Bold" Text="{ll:Str 诊断与反馈}" /> <LineBreak />
+                            <Run Text="{ll:Str '选择要发送给 LBGame 的诊断数据,诊断数据用于保护和及时更新 虚拟桌宠模拟器, 解决问题并改进产品.'}" /><LineBreak />
+                            <Run Text="{ll:Str '无论选择哪个选项,游戏都可以安全正常地运行.'}" /> <Hyperlink Click="hyper_moreInfo">
+                                <Run Text="{ll:Str 获取有关这些设置的更多信息}" />
+                            </Hyperlink>
+                            <LineBreak />   <Run FontWeight="Bold" Text="{ll:Str '当前存档Hash验证信息'}" />
+                            :<Run x:Name="RHashCheck" FontWeight="Bold" Text="通过" />
+                        </TextBlock>
+                        <RadioButton x:Name="RBDiagnosisYES" Margin="10,10,10,0" HorizontalAlignment="Left"
+                                VerticalAlignment="Top" Checked="RBDiagnosisYES_Checked"
+                                Content="{ll:Str '发送诊断数据: 发送游戏存档, 包括饱腹,状态等各种游戏内\&#13;数据. 可能会包括该游戏内存和CPU使用情况'}"
+                                GroupName="diagnosis" Style="{DynamicResource StandardRadioButtonStyle}" />
+                        <RadioButton x:Name="RBDiagnosisNO" Margin="10,10,10,0" HorizontalAlignment="Left"
+                                VerticalAlignment="Top" Checked="RBDiagnosisNO_Checked"
+                                Content="{ll:Str '不发送诊断数据: 适用于启用修改器,修改过游戏数据等不\&#13;符合分析数据条件. 或不希望提供游戏数据的玩家'}"
+                                GroupName="diagnosis" IsChecked="True" Style="{DynamicResource StandardRadioButtonStyle}" />
+                        <TextBlock Margin="0,15,0,0" HorizontalAlignment="Left" VerticalAlignment="Top"
+                                Background="{x:Null}" TextWrapping="Wrap">
+                            <Run FontWeight="Bold" Text="{ll:Str 反馈频率}" /><LineBreak />
+                            <Run Text="{ll:Str 'VOS 应寻求我反馈按以下频率'}" />
+                        </TextBlock>
+                        <ComboBox x:Name="CBDiagnosis" Width="200" Margin="10,5,0,0" HorizontalAlignment="Left"
+                                VerticalAlignment="Top" IsEnabled="False" SelectedIndex="1"
+                                SelectionChanged="CBDiagnosis_SelectionChanged"
+                                Style="{DynamicResource StandardComboBoxStyle}">
+                            <ComboBoxItem Content="{ll:Str '每 两百 周期一次'}" />
+                            <ComboBoxItem Content="{ll:Str '每 五百 周期一次'}" />
+                            <ComboBoxItem Content="{ll:Str '每 一千 周期一次'}" />
+                            <ComboBoxItem Content="{ll:Str '每 两千 周期一次'}" />
+                            <ComboBoxItem Content="{ll:Str '每 五千 周期一次'}" />
+                            <ComboBoxItem Content="{ll:Str '每 一万 周期一次'}" />
+                            <ComboBoxItem Content="{ll:Str '每 两万 周期一次'}" />
+                        </ComboBox>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
             <TabItem BorderBrush="{DynamicResource PrimaryDarker}" Header="{ll:Str MOD管理}">
                 <Grid>

@@ -82,6 +82,9 @@ namespace VPet_Simulator.Windows
             combCalFunState.IsEnabled = !mw.Set.EnableFunction;
             CalTimeInteraction();
 
+            swAutoCal.IsChecked = !mw.Set["gameconfig"].GetBool("noAutoCal");
+
+
             LanguageBox.Items.Add("null");
             foreach (string v in LocalizeCore.AvailableCultures)
             {
@@ -144,9 +147,9 @@ namespace VPet_Simulator.Windows
             SliderResolution.Value = mw.Set.Resolution;
 
 #if X64
-            GameVerison.Content = "游戏版本".Translate() + $"v{mw.version} x64";
+            GameVerison.Content = "游戏版本".Translate() + $"v{mw.Version} x64";
 #else
-            GameVerison.Content = "游戏版本".Translate() + $"v{mw.version} x86";
+            GameVerison.Content = "游戏版本".Translate() + $"v{mw.Version} x86";
 #endif
             //关于ui
             if (mw.IsSteamUser)
@@ -158,7 +161,6 @@ namespace VPet_Simulator.Windows
             {
                 runUserName.Text = Environment.UserName;
                 runActivate.Text = "尚未激活 您可能需要启动Steam或去Steam上免费领个".Translate();
-                RBCGPTUseLB.IsEnabled = false;
             }
             //CGPT
             switch (mw.Set["CGPT"][(gstr)"type"])
@@ -170,8 +172,8 @@ namespace VPet_Simulator.Windows
                 case "LB":
                     RBCGPTUseLB.IsChecked = true;
                     BtnCGPTReSet.Content = "初始化桌宠聊天程序".Translate();
-                    if (!mw.IsSteamUser)
-                        BtnCGPTReSet.IsEnabled = false;
+                    //if (!mw.IsSteamUser)
+                    //    BtnCGPTReSet.IsEnabled = false;
                     break;
                 case "OFF":
                 default:
@@ -179,7 +181,7 @@ namespace VPet_Simulator.Windows
                     BtnCGPTReSet.Content = "聊天框已关闭".Translate();
                     break;
             }
-            runabVer.Text = $"v{mw.version} ({mw.version})";
+            runabVer.Text = $"v{mw.Version} ({mw.version})";
 
             //mod列表
             ShowModList();
@@ -402,6 +404,7 @@ namespace VPet_Simulator.Windows
             if (!AllowChange)
                 return;
             mw.Set.Diagnosis = true;
+            CBDiagnosis.IsEnabled = true;
         }
 
         private void RBDiagnosisNO_Checked(object sender, RoutedEventArgs e)
@@ -409,6 +412,7 @@ namespace VPet_Simulator.Windows
             if (!AllowChange)
                 return;
             mw.Set.Diagnosis = false;
+            CBDiagnosis.IsEnabled = false;
         }
 
         private void CBDiagnosis_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -817,7 +821,7 @@ namespace VPet_Simulator.Windows
 
             if (ischangename)
             {
-                mw.Core.Save.Name = petloader.PetName.Translate();
+                mw.Core.Save.Name = mw.Pets[PetBox.SelectedIndex].PetName.Translate();
                 TextBoxPetName.Text = mw.Core.Save.Name;
                 if (mw.IsSteamUser)
                     SteamFriends.SetRichPresence("username", mw.Core.Save.Name);
@@ -865,7 +869,7 @@ namespace VPet_Simulator.Windows
                     //        MessageBoxX.Show("桌宠重置成功".Translate());
                     //    }
                     //});
-                    //TODO ((TalkSelect)mw.TalkBox)
+                    //((TalkSelect)mw.TalkBox).RelsTime
                     break;
                 case "OFF":
                 default:
@@ -1169,6 +1173,25 @@ namespace VPet_Simulator.Windows
         {
             mw.Save();
             MessageBoxX.Show("保存成功".Translate());
+        }
+
+        private void swAutoCal_Checked(object sender, RoutedEventArgs e)
+        {
+            if (!AllowChange)
+                return;
+            mw.Set["gameconfig"].SetBool("noAutoCal", !swAutoCal.IsChecked.Value);
+        }
+
+        private void restart_click(object sender, RoutedEventArgs e)
+        {
+            if (MessageBoxX.Show("是否重置游戏数据重新开始?\n该操作无法撤回".Translate(), "重新开始".Translate(), MessageBoxButton.YesNo) == MessageBoxResult.Yes)
+            {
+                mw.Core.Save = new GameSave(mw.Core.Save.Name);
+                mw.Set.Statistics = new Statistics();
+                CBSaveReLoad.IsEnabled = false;
+                BtnSaveReload.IsEnabled = false;
+                MessageBoxX.Show("重置成功".Translate());                
+            }            
         }
     }
 }

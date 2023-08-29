@@ -34,6 +34,7 @@ namespace VPet_Simulator.Windows.Interface
             smartmove = this["gameconfig"].GetBool("smartmove");
             enablefunction = !this["gameconfig"].GetBool("nofunction");
             Statistics = new Statistics(this["statistics"].ToList());
+            autobuy = this["gameconfig"].GetBool("autobuy");
         }
         public override string ToString()
         {
@@ -414,6 +415,20 @@ namespace VPet_Simulator.Windows.Interface
         {
             get => this["gameconfig"].GetInt("resolution", 500);
             set => this["gameconfig"].SetInt("resolution", value);
+        }
+
+        bool autobuy;
+        /// <summary>
+        /// 允许桌宠自动购买食品
+        /// </summary>
+        public bool AutoBuy
+        {
+            get => autobuy;
+            set
+            {
+                autobuy = value;
+                this["gameconfig"].SetBool("autobuy", value);
+            }
         }
     }
 }

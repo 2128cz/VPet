@@ -50,7 +50,7 @@ namespace VPet_Simulator.Windows
         public void Show(Food.FoodType type)
         {
             mw.Topmost = false;
-            IsEnabled = true;//逃出
+            showeatanm = true;//逃出
             if (_searchTextBox != null)
                 _searchTextBox.Text = "";
             if (LsbCategory.SelectedIndex == (int)type)
@@ -110,6 +110,7 @@ namespace VPet_Simulator.Windows
                 IOrderedEnumerable<Food> ordered;
                 switch (sortrule)
                 {
+                    default:
                     case 0:
                         if (sortasc)
                             ordered = foods.OrderBy(x => x.TranslateName);
@@ -146,11 +147,17 @@ namespace VPet_Simulator.Windows
                         else
                             ordered = foods.OrderByDescending(x => x.Feeling);
                         break;
-                    default:
+                    case 6:
                         if (sortasc)
                             ordered = foods.OrderBy(x => x.Health);
                         else
                             ordered = foods.OrderByDescending(x => x.Health);
+                        break;
+                    case 7:
+                        if (sortasc)
+                            ordered = foods.OrderBy(x => x.Exp);
+                        else
+                            ordered = foods.OrderByDescending(x => x.Exp);
                         break;
                 }
                 Dispatcher.Invoke(() =>
@@ -185,96 +192,54 @@ namespace VPet_Simulator.Windows
             //eventArg.Source = sender;
             //PageDetail.RaiseEvent(eventArg);
         }
+        bool showeatanm = true;
+
         private void BtnBuy_Click(object sender, RoutedEventArgs e)
         {
-
             var Button = sender as Button;
             var item = Button.DataContext as Food;
-            IsEnabled = false;
             //看是什么模式
             if (mw.Set.EnableFunction)
-            {
-                if (item.Price >= mw.Core.Save.Money)
+            {//$10以内的食物允许赊账
+                if (item.Price >= 10 && item.Price >= mw.Core.Save.Money)
                 {//买不起
                     MessageBoxX.Show("您没有足够金钱来购买 {0}\n您需要 {1:f2} 金钱来购买\n您当前 {2:f2} 拥有金钱"
                         .Translate(item.TranslateName, item.Price, mw.Core.Save.Money)
                         , "金钱不足".Translate());
                     return;
                 }
-
-                //获取吃腻时间
-
-                DateTime now = DateTime.Now;
-                DateTime eattime = mw.Set.PetData.GetDateTime("buytime_" + item.Name, now);
-                double eattimes = 0;
-                if (eattime <= now)
+                //看看是否超模
+                if (mw.HashCheck && item.IsOverLoad())
                 {
-                    eattime = now;
+                    if (MessageBoxX.Show("当前食物/物品属性超模,是否继续使用?\n使用超模食物可能会导致游戏发生不可预料的错误\n使用超模食物不影响大部分成就解锁\n本物品推荐价格为{0:f0}"
+                        .Translate(item.RealPrice), "超模食物/物品使用提醒".Translate(), MessageBoxButton.YesNo) != MessageBoxResult.Yes)
+                    {
+                        return;
+                    }
+                    mw.HashCheck = false;
                 }
-                else
-                {
-                    eattimes = (eattime - now).TotalHours;
-                }
-                //开始加点
-                mw.Core.Save.EatFood(item, Math.Max(0.5, 1 - Math.Pow(eattimes, 2) * 0.01));
-                //吃腻了
-                eattimes += 2;
-                mw.Set.PetData.SetDateTime("buytime_" + item.Name, now.AddHours(eattimes));
-                //通知
-                item.LoadEatTimeSource(mw);
-                item.NotifyOfPropertyChange(DateTime.Now.ToString());
 
-                mw.Core.Save.Money -= item.Price;
-                //统计
-                mw.Set.Statistics[(gint)("buy_" + item.Name)]++;
-                mw.Set.Statistics[(gdbe)"stat_betterbuy"] += item.Price;
+                mw.TakeItem(item);
+            }
+            if (showeatanm)
+            {//显示动画
+                showeatanm = false;
+                GraphType gt;
                 switch (item.Type)
                 {
-                    case Food.FoodType.Food:
-                        mw.Set.Statistics[(gdbe)"stat_bb_food"] += item.Price;
+                    default:
+                        gt = GraphType.Eat;
                         break;
                     case Food.FoodType.Drink:
-                        mw.Set.Statistics[(gdbe)"stat_bb_drink"] += item.Price;
-                        break;
-                    case Food.FoodType.Drug:
-                        mw.Set.Statistics[(gdbe)"stat_bb_drug"] += item.Price;
-                        break;
-                    case Food.FoodType.Snack:
-                        mw.Set.Statistics[(gdbe)"stat_bb_snack"] += item.Price;
-                        break;
-                    case Food.FoodType.Functional:
-                        mw.Set.Statistics[(gdbe)"stat_bb_functional"] += item.Price;
-                        break;
-                    case Food.FoodType.Meal:
-                        mw.Set.Statistics[(gdbe)"stat_bb_meal"] += item.Price;
+                        gt = GraphType.Drink;
                         break;
                     case Food.FoodType.Gift:
-                        mw.Set.Statistics[(gdbe)"stat_bb_gift"] += item.Price;
+                        gt = GraphType.Gift;
                         break;
                 }
-
-            }
-            GraphType gt;
-            switch (item.Type)
-            {
-                default:
-                    gt = GraphType.Eat;
-                    break;
-                case Food.FoodType.Drink:
-                    gt = GraphType.Drink;
-                    break;
-                case Food.FoodType.Gift:
-                    gt = GraphType.Gift;
-                    break;
-            }
-            var name = mw.Core.Graph.FindName(gt);
-            var ig = mw.Core.Graph.FindGraph(name, AnimatType.Single, mw.Core.Save.Mode);
-            if (ig != null)
-            {
-                var b = mw.Main.FindDisplayBorder(ig);
-                ig.Run(b, item.ImageSource, () =>
+                mw.Main.Display(gt, item.ImageSource, () =>
                 {
-                    Dispatcher.Invoke(() => IsEnabled = true);
+                    showeatanm = true;
                     mw.Main.DisplayToNomal();
                     mw.Main.EventTimer_Elapsed();
                 });
@@ -381,6 +346,23 @@ namespace VPet_Simulator.Windows
         {
             rMoney = sender as Run;
             rMoney.Text = mw.Core.Save.Money.ToString("f2");
+        }
+        private Switch _puswitchautobuy;
+        private void Switch_Loaded_1(object sender, RoutedEventArgs e)
+        {
+            _puswitchautobuy = sender as Switch;
+            _puswitchautobuy.IsChecked = mw.Set.AutoBuy;
+            _puswitchautobuy.Click += Switch_AutoBuy_Checked;
+        }
+        private void Switch_AutoBuy_Checked(object sender, RoutedEventArgs e)
+        {
+            if (_puswitchautobuy.IsChecked.Value && mw.Core.Save.Money < 100)
+            {
+                _puswitchautobuy.IsChecked = false;
+                MessageBoxX.Show(mw, "余额不足100，无法开启自动购买".Translate(), "更好买".Translate());
+                return;
+            }
+            mw.Set.AutoBuy = _puswitchautobuy.IsChecked.Value;
         }
     }
 }

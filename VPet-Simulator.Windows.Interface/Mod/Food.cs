@@ -53,6 +53,10 @@ namespace VPet_Simulator.Windows.Interface
             /// 礼品 (没做)
             /// </summary>
             Gift,
+            /// <summary>
+            /// 不超模的好食物
+            /// </summary>
+            NoOverLoad,
         }
         /// <summary>
         /// 食物类型
@@ -128,7 +132,7 @@ namespace VPet_Simulator.Windows.Interface
                         sb.Append("好感度".Translate() + ":\t").Append(Likability > 0 ? "+" : "").Append(Likability.ToString("f2"));
                     desc = sb.ToString();
                 }
-                
+
                 return desc + '\n' + descs + '\n' + Desc.Translate();
             }
         }
@@ -145,8 +149,23 @@ namespace VPet_Simulator.Windows.Interface
         /// </summary>
         [Line(ignoreCase: true)]
         public string Image;
-
-
+        private bool? isoverload = null;
+        /// <summary>
+        /// 当前物品推荐价格
+        /// </summary>
+        public double RealPrice => ((Exp / 4 + Strength / 5 + StrengthDrink / 3 + StrengthFood / 2 + Feeling / 5) / 3 + Health + Likability * 10);
+        /// <summary>
+        /// 该食物是否超模
+        /// </summary>
+        public bool IsOverLoad()
+        {
+            if (isoverload == null)
+            {
+                double relp = RealPrice;
+                isoverload = Price < (relp - 10) * 0.7;// Price > (relp + 10) * 1.3;// || Price < (relp - 10) * 0.7;//30%容错
+            }
+            return isoverload.Value;
+        }
         /// <summary>
         /// 加载物品图片
         /// </summary>
